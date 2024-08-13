@@ -5,9 +5,9 @@
  *                                                                           *
  * This file is part of the HDF Java Products distribution.                  *
  * The full copyright notice, including terms governing use, modification,   *
- * and redistribution, is contained in the files COPYING and Copyright.html. *
- * COPYING can be found at the root of the source code distribution tree.    *
- * Or, see https://support.hdfgroup.org/products/licenses.html               *
+ * and redistribution, is contained in the COPYING file, which can be found  *
+ * at the root of the source code distribution tree,                         *
+ * or in https://www.hdfgroup.org/licenses.                                  *
  * If you do not have access to either file, you may request a copy from     *
  * help@hdfgroup.org.                                                        *
  ****************************************************************************/
@@ -16,9 +16,7 @@ package hdf.object;
 
 /** General utility class */
 public final class Utils {
-    private Utils() {
-        throw new IllegalStateException("Utility class");
-    }
+    private Utils() { throw new IllegalStateException("Utility class"); }
 
     /**
      * Retrieves the Java Runtime Class of the given Object. B = byte array, S = short array, I = int
@@ -28,14 +26,15 @@ public final class Utils {
      *            the Object to determine the Runtime Class of
      * @return the Java Runtime Class of the given Object.
      */
-    public static char getJavaObjectRuntimeClass(Object o) {
+    public static char getJavaObjectRuntimeClass(Object o)
+    {
         if (o == null)
             return ' ';
 
         String cName = o.getClass().getName();
 
-        if (cName.equals("java.lang.String") || cName.equals("java.util.Vector")
-                || cName.equals("java.util.Arrays$ArrayList") || cName.equals("java.util.ArrayList"))
+        if (cName.equals("java.lang.String") || cName.equals("java.util.Vector") ||
+            cName.equals("java.util.Arrays$ArrayList") || cName.equals("java.util.ArrayList"))
             return 'L';
 
         int cIndex = cName.lastIndexOf('[');
@@ -45,5 +44,4 @@ public final class Utils {
 
         return ' ';
     }
-
 }

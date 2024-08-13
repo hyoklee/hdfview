@@ -5,9 +5,9 @@
  *                                                                           *
  * This file is part of the HDF Java Products distribution.                  *
  * The full copyright notice, including terms governing use, modification,   *
- * and redistribution, is contained in the files COPYING and Copyright.html. *
- * COPYING can be found at the root of the source code distribution tree.    *
- * Or, see https://support.hdfgroup.org/products/licenses.html               *
+ * and redistribution, is contained in the COPYING file, which can be found  *
+ * at the root of the source code distribution tree,                         *
+ * or in https://www.hdfgroup.org/licenses.                                  *
  * If you do not have access to either file, you may request a copy from     *
  * help@hdfgroup.org.                                                        *
  ****************************************************************************/
@@ -32,6 +32,10 @@ public abstract interface DataView {
     /** The image view type */
     public static final int DATAVIEW_IMAGE = 2;
 
-    /** @return the data object displayed in this data viewer */
+    /**
+     * Get the data object displayed in this data viewer
+     *
+     * @return the data object displayed in this data viewer
+     */
     public abstract HObject getDataObject();
 }

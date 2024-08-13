@@ -1,0 +1,100 @@
+name: hdfview release build
+
+# Triggers the workflow on demand
+on:
+  workflow_dispatch:
+    inputs:
+      use_tag:
+        description: 'HDFView Release version tag'
+        type: string
+        required: false
+        default: snapshot
+      use_tag4:
+        description: 'HDF Release version tag and base name'
+        type: string
+        required: false
+        default: snapshot
+      use_tag5:
+        description: 'HDF5 Release version tag'
+        type: string
+        required: false
+        default: snapshot
+      name_tag5:
+        description: 'HDF5 Release version base name'
+        type: string
+        required: false
+        default: snapshot
+
+permissions:
+  contents: read
+
+# A workflow run is made up of one or more jobs that can run sequentially or
+# in parallel.
+jobs:
+  log-the-inputs:
+    runs-on: ubuntu-latest
+    outputs:
+      rel_tag: ${{ steps.get-tag-name.outputs.RELEASE_TAG }}
+      rel4_tag: ${{ steps.get-tag-name.outputs.RELEASE4_TAG }}
+      rel5_tag: ${{ steps.get-tag-name.outputs.RELEASE5_TAG }}
+    steps:
+    - name: Get tag name
+      id: get-tag-name
+      env:
+        TAG: ${{ inputs.use_tag }}
+        TAG4: ${{ inputs.use_tag4 }}
+        TAG5: ${{ inputs.use_tag5 }}
+      run: |
+          echo "RELEASE_TAG=$TAG" >> $GITHUB_OUTPUT
+          echo "RELEASE4_TAG=$TAG4" >> $GITHUB_OUTPUT
+          echo "RELEASE5_TAG=$TAG5" >> $GITHUB_OUTPUT
+
+  call-workflow-tarball:
+    needs: log-the-inputs
+    uses: ./.github/workflows/tarball.yml
+    with:
+      use_tag: ${{ needs.log-the-inputs.outputs.rel_tag }}
+      use_environ: release
+
+  call-workflow-ant:
+    needs: [log-the-inputs, call-workflow-tarball]
+    uses: ./.github/workflows/ant.yml
+    with:
+      file_base: ${{ needs.call-workflow-tarball.outputs.file_base }}
+      use_hdf: ${{ needs.log-the-inputs.outputs.rel4_tag }}
+      use_hdf5: ${{ needs.log-the-inputs.outputs.rel5_tag }}
+      name_hdf5: ${{ inputs.name_tag5 }}
+      snap_name: HDFView-${{ needs.call-workflow-tarball.outputs.source_base }}
+      use_environ: release
+    secrets:      
+      APPLE_CERTS_BASE64: ${{ secrets.APPLE_CERTS_BASE64 }}
+      APPLE_CERTS_BASE64_PASSWD: ${{ secrets.APPLE_CERTS_BASE64_PASSWD }}
+      KEYCHAIN_PASSWD: ${{ secrets.KEYCHAIN_PASSWD }}
+
+  call-workflow-ant-app:
+    needs: [log-the-inputs, call-workflow-tarball]
+    uses: ./.github/workflows/ant-app.yml
+    with:
+      file_base: ${{ needs.call-workflow-tarball.outputs.file_base }}
+      use_hdf: ${{ needs.log-the-inputs.outputs.rel4_tag }}
+      use_hdf5: ${{ needs.log-the-inputs.outputs.rel5_tag }}
+      name_hdf5: ${{ inputs.name_tag5 }}
+      snap_name: HDFView-${{ needs.call-workflow-tarball.outputs.source_base }}
+      use_environ: release
+    secrets:      
+      APPLE_CERTS_BASE64: ${{ secrets.APPLE_CERTS_BASE64 }}
+      APPLE_CERTS_BASE64_PASSWD: ${{ secrets.APPLE_CERTS_BASE64_PASSWD }}
+      KEYCHAIN_PASSWD: ${{ secrets.KEYCHAIN_PASSWD }}
+
+  call-workflow-release:
+    needs: [log-the-inputs, call-workflow-tarball, call-workflow-ant, call-workflow-ant-app]
+    permissions:
+      contents: write # In order to allow tag creation
+    uses: ./.github/workflows/release-files.yml
+    with:
+      file_base: HDFView-${{ needs.call-workflow-tarball.outputs.source_base }}
+      file_branch: ${{ needs.call-workflow-tarball.outputs.file_branch }}
+      file_sha: ${{ needs.call-workflow-tarball.outputs.file_sha }}
+      use_tag: ${{ needs.log-the-inputs.outputs.rel_tag }}
+      use_environ: release
+

@@ -5,9 +5,9 @@
  *                                                                           *
  * This file is part of the HDF Java Products distribution.                  *
  * The full copyright notice, including terms governing use, modification,   *
- * and redistribution, is contained in the files COPYING and Copyright.html. *
- * COPYING can be found at the root of the source code distribution tree.    *
- * Or, see https://support.hdfgroup.org/products/licenses.html               *
+ * and redistribution, is contained in the COPYING file, which can be found  *
+ * at the root of the source code distribution tree,                         *
+ * or in https://www.hdfgroup.org/licenses.                                  *
  * If you do not have access to either file, you may request a copy from     *
  * help@hdfgroup.org.                                                        *
  ****************************************************************************/
@@ -33,34 +33,59 @@ public abstract interface ImageView extends DataView {
      */
     public abstract Rectangle getSelectedArea();
 
-    /** @return true if the image is a truecolor image. */
+    /**
+     * Check if the image is a truecolor image.
+     *
+     * @return true if the image is a truecolor image.
+     */
     public abstract boolean isTrueColor();
 
-    /** @return true if the image interlace is plane interlace. */
+    /**
+     * Check if the image interlace is plane interlace.
+     *
+     * @return true if the image interlace is plane interlace.
+     */
     public abstract boolean isPlaneInterlace();
 
-    /** @return array of selected data */
+    /**
+     * Get the array of selected data
+     *
+     * @return array of selected data
+     */
     public abstract Object getSelectedData();
 
-    /** @return the image displayed in this imageView */
+    /**
+     * Get the image displayed in this imageView
+     *
+     * @return the image displayed in this imageView
+     */
     public abstract Image getImage();
 
-    /** Sets the image
+    /**
+     * Sets the image
      *
      * @param img the image to view
      */
     public abstract void setImage(Image img);
 
-    /** @return the palette of the image */
+    /**
+     * Get the palette of the image
+     *
+     * @return the palette of the image
+     */
     public abstract byte[][] getPalette();
 
-    /** Sets the image palette
+    /**
+     * Sets the image palette
      *
      * @param palette the palette for the image to view
      */
     public abstract void setPalette(byte[][] palette);
 
-    /** @return the byte array of the image data */
+    /**
+     * Get the byte array of the image data
+     *
+     * @return the byte array of the image data
+     */
     public abstract byte[] getImageByteData();
-
 }

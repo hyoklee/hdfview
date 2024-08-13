@@ -5,9 +5,9 @@
  *                                                                           *
  * This file is part of the HDF Java Products distribution.                  *
  * The full copyright notice, including terms governing use, modification,   *
- * and redistribution, is contained in the files COPYING and Copyright.html. *
- * COPYING can be found at the root of the source code distribution tree.    *
- * Or, see https://support.hdfgroup.org/products/licenses.html               *
+ * and redistribution, is contained in the COPYING file, which can be found  *
+ * at the root of the source code distribution tree,                         *
+ * or in https://www.hdfgroup.org/licenses.                                  *
  * If you do not have access to either file, you may request a copy from     *
  * help@hdfgroup.org.                                                        *
  ****************************************************************************/
@@ -22,8 +22,7 @@ import java.util.Collection;
  *
  * @see hdf.object.HObject
  */
-public interface Attribute
-{
+public interface Attribute {
     /**
      * Returns the HObject to which this Attribute is currently "attached".
      *
@@ -124,19 +123,26 @@ public interface Attribute
     int getAttributePlane();
 
     /**
-     * @return true if the data is a single scalar point; otherwise, returns
-     *         false.
+     * Check if attribute's dataspace is a NULL
+     *
+     * @return true if the dataspace is a NULL; otherwise, returns false.
+     */
+    boolean isAttributeNULL();
+
+    /**
+     * Check if attribute is a single scalar point
+     *
+     * @return true if the data is a single scalar point; otherwise, returns false.
      */
     boolean isAttributeScalar();
 
     /**
      * Not for public use in the future.
      *
-     * setData() is not safe to use because it changes memory buffer
-     * of the dataset object. Dataset operations such as write/read
-     * will fail if the buffer type or size is changed.
+     * setAttributeData() is not safe to use because it changes memory buffer of the dataset object. Dataset
+     * operations such as write/read will fail if the buffer type or size is changed.
      *
-     * @param d  the object data -must be an array of Objects
+     * @param d the object data -must be an array of Objects
      */
     void setAttributeData(Object d);
 

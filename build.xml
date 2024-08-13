@@ -4,6 +4,7 @@
     xmlns:fx="javafx:com.sun.javafx.tools.ant"
     xmlns:sonar="antlib:org.sonar.ant"
     xmlns:jacoco="antlib:org.jacoco.ant"
+	xmlns:doxygen="antlib:org.doxygen.tools"
     xmlns:if="ant:if"
     xmlns:unless="ant:unless">
     <property environment="env" />
@@ -14,9 +15,14 @@
 
     <record name="antoutput.log" action="start" append="${build.antoutput.append}" loglevel="verbose" />
 
+    <property name="sign_state" value="sign" />
+    <condition property="sign.enable">
+        <equals arg1="${sign_state}" arg2="sign" />
+    </condition>
     <!-- MAC signing: -->
     <property name="sign.account" value="${env.SIGNER}" />
-    <property name="login.keychain_key" value="${env.KEYCHAIN_PASSWD}" />
+    <property name="pass.keychain_key" value="${env.KEYCHAIN_PASSWD}" />
+    <property name="name.keychain_key" value="${env.KEYCHAIN_NAME}.keychain" />
 
     <!-- MAC notary: -->
     <property name="notarize.account" value="${env.NOTARY_USER}" />
@@ -65,11 +71,6 @@
     <property name="examples.path" value="examples/**"/>
     <property name="test.path" value="test/**"/>
     <property name="examples.test.path" value="${examples.path} ${test.path}"/>
-
-    <!-- Old style java version -->
-    <condition property="version1.8">
-      <equals arg1="1.8" arg2="${ant.java.version}"/>
-    </condition>
 
     <loadfile property="hdf4.version" srcFile="${hdf4.settings.version}" failonerror="false">
         <filterchain>
@@ -249,7 +250,7 @@
         <fileset dir="${lib.dir}/extra" includes="slf4j-nop${version.slf4j}.jar" excludes="*sources.jar" />
     </path>
     <path id="unit-classpath">
-        <fileset dir="${lib.dir}" includes="extra/junit-4.13.2.jar extra/hamcrest-core-1.3.jar" excludes="*sources.jar" />
+        <fileset dir="${lib.dir}" includes="org.junit.jar org.hamcrest.jar" excludes="*sources.jar" />
     </path>
     <path id="swtbot-classpath">
         <fileset dir="${lib.dir}/ext/swt/swtbot" includes="*swtbot*.jar *log4j*.jar" excludes="*sources.jar" />
@@ -489,7 +490,7 @@
         <os family="mac" />
     </condition>
 
-    <target name="rundebug" depends="jar" description="Runs the application with remote debugger">
+    <target name="rundebug" depends="deploy,jar" description="Runs the application with remote debugger">
         <mkdir dir="${jar.dir}/lib/ext" />
         <java fork="true" classname="${main-class}">
             <jvmarg value="-Dorg.slf4j.simpleLogger.defaultLogLevel=${build.log.level.run}" />
@@ -502,15 +503,15 @@
                 <path refid="hdfobject-jar" />
                 <path refid="application" />
             </classpath>
-            <sysproperty key="java.library.path" path="${hdf.lib.dir}${path.separator}${hdf5.lib.dir}" />
+            <sysproperty key="java.library.path" path="${release.dir}${path.separator}${release.dir}/bin" />
             <sysproperty key="hdfview.root" path="${basedir}/${jar.dir}" />
             <!--  <sysproperty key="hdfview.workdir" path="${basedir}/${jar.dir}" />  -->
             <env key="HDF5_PLUGIN_PATH" path="${hdf5.plugin.dir}" />
-            <env key="${platform.hdf.lib}" path="${hdf.lib.dir}${path.separator}${hdf5.lib.dir}${path.separator}${platform.hdf.lib}" />
+            <env key="${platform.hdf.lib}" path="${release.dir}${path.separator}${release.dir}/bin${path.separator}${platform.hdf.lib}" />
         </java>
     </target>
 
-    <target name="run" depends="jar" description="Runs the application">
+    <target name="run" depends="deploy,jar" description="Runs the application">
         <mkdir dir="${jar.dir}/lib/ext" />
         <java fork="true" classname="${main-class}">
             <jvmarg value="-Dorg.slf4j.simpleLogger.defaultLogLevel=${build.log.level.run}" />
@@ -522,11 +523,11 @@
                 <path refid="hdfobject-jar" />
                 <path refid="application" />
             </classpath>
-            <sysproperty key="java.library.path" path="${hdf.lib.dir}${path.separator}${hdf5.lib.dir}" />
+            <sysproperty key="java.library.path" path="${release.dir}${path.separator}${release.dir}/bin" />
             <sysproperty key="hdfview.root" path="${basedir}/${jar.dir}" />
             <!--  <sysproperty key="hdfview.workdir" path="${basedir}/${jar.dir}" />  -->
             <env key="HDF5_PLUGIN_PATH" path="${hdf5.plugin.dir}" />
-            <env key="${platform.hdf.lib}" path="${hdf.lib.dir}${path.separator}${hdf5.lib.dir}${path.separator}${platform.hdf.lib}" />
+            <env key="${platform.hdf.lib}" path="${release.dir}${path.separator}${release.dir}/bin${path.separator}${platform.hdf.lib}" />
         </java>
     </target>
 
@@ -562,7 +563,7 @@
         <fileset dir="${exclasses.dir}" includes="**/*.class" excludes="**/*$* **/*.txt testfiles/**" />
     </target>
 
-    <target name="run-one-example" depends="compile-test" description="Runs one example">
+    <target name="run-one-example" depends="deploy,compile-test" description="Runs one example">
         <dirname property="exfile.dir" file="${build.exfile}" />
         <basename property="exdir.name" file="${exfile.dir}" />
         <basename property="exfile.name" file="${build.exfile}" suffix=".class" />
@@ -572,15 +573,15 @@
         <java fork="true" classname="${exfile.name}" dir="${classes.dir}">
             <jvmarg value="-Dorg.slf4j.simpleLogger.defaultLogLevel=${build.log.level.test}" />
             <jvmarg value="${XstartOnFirstThreadFlag}" />
+            <jvmarg line="${exfile.name}.class" />
             <classpath>
                 <path refid="project-classpath" />
                 <path refid="log-classpath" />
                 <path refid="hdfobject-jar" />
-                <pathelement location="${classes.dir}" />
-                <pathelement path="${exclasses.dir}" />
+                <pathelement location="${exclasses.dir}" />
             </classpath>
-            <sysproperty key="java.library.path" path="${hdf.lib.dir}${path.separator}${hdf5.lib.dir}" />
-            <env key="${platform.hdf.lib}" path="${hdf.lib.dir}${path.separator}${hdf5.lib.dir}${path.separator}${platform.hdf.lib}" />
+            <sysproperty key="java.library.path" path="${release.dir}${path.separator}${release.dir}/bin" />
+            <env key="${platform.hdf.lib}" path="${release.dir}${path.separator}${release.dir}/bin${path.separator}${platform.hdf.lib}" />
         </java>
     </target>
 
@@ -686,7 +687,7 @@
         <property name="agentvmparam" value="" />
     </target>
 
-    <target name="junit-debug-test" depends="objectjar,clean-junit-uitest,compile-test,jacoco">
+    <target name="junit-debug-test" depends="deploy,objectjar,clean-junit-uitest,compile-test,jacoco">
         <mkdir dir="${report.dir}" />
         <junit showoutput="yes" enabletestlistenerevents="true" fork="yes" printsummary="withOutAndErr" dir="${classes.dir}">
             <jvmarg value="-Dorg.slf4j.simpleLogger.defaultLogLevel=${build.log.level.test}" />
@@ -699,15 +700,15 @@
                 <path refid="build-classpath" />
                 <pathelement location="${testclasses.dir}" />
             </classpath>
-            <sysproperty key="java.library.path" path="${hdf.lib.dir}${path.separator}${hdf5.lib.dir}" />
-            <env key="${platform.hdf.lib}" path="${hdf.lib.dir}${path.separator}${hdf5.lib.dir}${path.separator}${platform.hdf.lib}" />
+            <sysproperty key="java.library.path" path="${release.dir}${path.separator}${release.dir}/bin" />
+            <env key="${platform.hdf.lib}" path="${release.dir}${path.separator}${release.dir}/bin${path.separator}${platform.hdf.lib}" />
             <test name="${build.object.test}" todir="${report.dir}" outfile="TEST-${build.object.test}">
                 <formatter type="plain" />
             </test>
         </junit>
     </target>
 
-    <target name="junit-single-test" depends="objectjar,clean-junit-uitest,compile-test,jacoco">
+    <target name="junit-single-test" depends="deploy,objectjar,clean-junit-uitest,compile-test,jacoco">
         <mkdir dir="${report.dir}" />
         <junit showoutput="yes" enabletestlistenerevents="true" fork="yes" printsummary="withOutAndErr" dir="${classes.dir}">
             <jvmarg value="-Dorg.slf4j.simpleLogger.defaultLogLevel=${build.log.level.test}" />
@@ -718,15 +719,15 @@
                 <path refid="build-classpath" />
                 <pathelement location="${testclasses.dir}" />
             </classpath>
-            <sysproperty key="java.library.path" path="${hdf.lib.dir}${path.separator}${hdf5.lib.dir}" />
-            <env key="${platform.hdf.lib}" path="${hdf.lib.dir}${path.separator}${hdf5.lib.dir}${path.separator}${platform.hdf.lib}" />
+            <sysproperty key="java.library.path" path="${release.dir}${path.separator}${release.dir}/bin" />
+            <env key="${platform.hdf.lib}" path="${release.dir}${path.separator}${release.dir}/bin${path.separator}${platform.hdf.lib}" />
             <test name="${build.object.test}" todir="${report.dir}" outfile="TEST-${build.object.test}">
                 <formatter type="plain" />
             </test>
         </junit>
     </target>
 
-    <target name="junit" depends="objectjar,clean-junit-uitest,compile-test,jacoco" description="Runs the Object Library tests">
+    <target name="junit" depends="deploy,objectjar,clean-junit-uitest,compile-test,jacoco" description="Runs the Object Library tests">
         <mkdir dir="${report.dir}" />
         <junit showoutput="yes" enabletestlistenerevents="true" fork="yes" printsummary="withOutAndErr" dir="${classes.dir}">
             <jvmarg value="-Dorg.slf4j.simpleLogger.defaultLogLevel=${build.log.level.test}" />
@@ -737,8 +738,8 @@
                 <path refid="build-classpath" />
                 <pathelement location="${testclasses.dir}" />
             </classpath>
-            <sysproperty key="java.library.path" path="${hdf.lib.dir}${path.separator}${hdf5.lib.dir}" />
-            <env key="${platform.hdf.lib}" path="${hdf.lib.dir}${path.separator}${hdf5.lib.dir}${path.separator}${platform.hdf.lib}" />
+            <sysproperty key="java.library.path" path="${release.dir}${path.separator}${release.dir}/bin" />
+            <env key="${platform.hdf.lib}" path="${release.dir}${path.separator}${release.dir}/bin${path.separator}${platform.hdf.lib}" />
 
             <formatter type="xml" />
             <formatter type="plain" />
@@ -815,11 +816,11 @@
                     <pathelement location="${uitestclasses.dir}" />
                 </classpath>
 
-                <sysproperty key="java.library.path" path="${hdf.lib.dir}${path.separator}${hdf5.lib.dir}" />
+                <sysproperty key="java.library.path" path="${release.dir}${path.separator}${release.dir}/bin" />
                 <sysproperty key="hdfview.root" path="@{rootdir}" />
                 <sysproperty key="hdfview.workdir" path="@{workdir}" />
                 <sysproperty key="hdfview.propfile" path="@{propfile}" />
-                <env key="${platform.hdf.lib}" path="${hdf.lib.dir}${path.separator}${hdf5.lib.dir}${path.separator}${platform.hdf.lib}" />
+                <env key="${platform.hdf.lib}" path="${release.dir}${path.separator}${release.dir}/bin${path.separator}${platform.hdf.lib}" />
 
                 <test name="uitest.${test}" todir="${report.dir}" outfile="TEST-uitest.${test}">
                   <formatter type="xml" />
@@ -829,11 +830,11 @@
         </sequential>
     </macrodef>
 
-    <target name="runauitest" description="Runs the test you specify on the command line with -Dtest=" depends="jar, clean-junit-uitest, compile-test, ensure-test5-name, ensure-test4-name, jacoco">
+    <target name="runauitest" description="Runs the test you specify on the command line with -Dtest=" depends="deploy,jar, clean-junit-uitest, compile-test, ensure-test5-name, ensure-test4-name, jacoco">
         <mkdir dir="${report.dir}" />
 
         <run-ui-junit
-            rootdir="${basedir}/${uitestclasses.dir}"
+            rootdir="${basedir}/${jar.dir}"
             workdir="${basedir}/${uitestclasses.dir}/uitest"
             propfile="${basedir}/${uitestclasses.dir}/.hdfview${app.version}"
             includes="**/${uitestclasses.dir}/${test}.class"
@@ -842,14 +843,14 @@
     </target>
 
     <!-- Top-level target for UI tests. Calls separate targets for HDFView UI tests, HDF4 UI tests and HDF5 UI tests. -->
-    <target name="junit-uitest" depends="jar, clean-junit-uitest, jacoco, compile-test, -hdfview-ui-tests, -hdf4-ui-tests, -hdf5-ui-tests" description="Runs the UI tests" />
+    <target name="junit-uitest" depends="jar, clean-junit-uitest, jacoco, compile-test, deploy, -hdfview-ui-tests" description="Runs the UI tests" />
 
     <!-- Internal target to run HDFView UI tests that are independent of FileFormats. -->
     <target name="-hdfview-ui-tests" depends="jar, compile-uitest, clean-junit-uitest">
         <mkdir dir="${report.dir}" />
 
         <run-ui-junit
-            rootdir="${basedir}/${uitestclasses.dir}"
+            rootdir="${basedir}/${jar.dir}"
             workdir="${basedir}/${uitestclasses.dir}/uitest"
             propfile="${basedir}/${uitestclasses.dir}/.hdfview${app.version}"
             includes="**/${uitestclasses.dir}/${test}.class"
@@ -863,7 +864,7 @@
 
         <!-- Run the top-level HDF4 UI tests -->
         <run-ui-junit
-            rootdir="${basedir}/${hdf4uitestclasses.dir}"
+            rootdir="${basedir}/${jar.dir}"
             workdir="${basedir}/${hdf4uitestclasses.dir}"
             propfile="${basedir}/${uitestclasses.dir}/.hdfview${app.version}"
             includes="**/${hdf4uitestclasses.dir}/${test}.class"
@@ -877,7 +878,7 @@
 
         <!-- Run the top-level HDF5 UI tests -->
         <run-ui-junit
-            rootdir="${basedir}/${hdf5uitestclasses.dir}"
+            rootdir="${basedir}/${jar.dir}"
             workdir="${basedir}/${hdf5uitestclasses.dir}"
             propfile="${basedir}/${uitestclasses.dir}/.hdfview${app.version}"
             includes="${hdf5uitestclasses.dir}/${test}.class"
@@ -889,7 +890,7 @@
         <mkdir dir="${report.dir}" />
 
         <run-ui-junit
-            rootdir="${basedir}/${testclasses.dir}"
+            rootdir="${basedir}/${jar.dir}"
             workdir="${basedir}/${testclasses.dir}/modules"
             includes="**/modules/*Test*"
             excludes="**/modules/*$*"
@@ -1125,6 +1126,7 @@
         <mkdir dir="${release.dir}/extra" />
         <mkdir dir="${release.dir}/samples" />
         <mkdir dir="${release.dir}/doc" />
+        <mkdir dir="${release.dir}/plugin" />
 
         <!-- Copy the application and dependencies -->
         <copy todir="${release.dir}">
@@ -1173,7 +1175,6 @@
                 <exclude name="slf4j*.jar" />
                 <exclude name="*.lib" />
             </fileset>
-
             <fileset dir="${hdf5.lib.dir}">
                 <include name="*.jar" />
                 <include name="hdf5_java.dll" />
@@ -1186,16 +1187,28 @@
                 <include name="hdf_java.dll" />
             </fileset>
             <fileset dir="${hdf.lib.dir}/../bin">
+                <include name="hdf_java.dll" />
                 <include name="hdf.dll"/>
                 <include name="mfhdf.dll"/>
-                <include name="xdr.dll"/>
             </fileset>
-
             <fileset dir="${hdf5.lib.dir}">
                 <include name="hdf5_java.dll" />
             </fileset>
             <fileset dir="${hdf5.lib.dir}/../bin">
+                <include name="hdf5_java.dll" />
                 <include name="hdf5.dll"/>
+            </fileset>
+        </copy>
+        <!-- Optional copy xdr -->
+        <copy todir="${release.dir}/bin" failonerror="false">
+            <fileset dir="${hdf.lib.dir}/../bin">
+                <include name="xdr.dll"/>
+            </fileset>
+        </copy>
+        <!-- Optional copy plugins -->
+        <copy todir="${release.dir}/bin/plugin" failonerror="false">
+            <fileset dir="${hdf5.lib.dir}/plugin">
+                <include name="*.dll" />
             </fileset>
         </copy>
 
@@ -1216,14 +1229,10 @@
                 <exclude name="slf4j*.jar" />
             </fileset>
             <fileset dir="${hdf.lib.dir}" followsymlinks="true">
-                <filename regex="libhdf\.so(\.[0-9])$"/>
+                <filename regex="libhdf\.so(\.[0-9][0-9])$"/>
             </fileset>
             <fileset dir="${hdf.lib.dir}" followsymlinks="true">
-                <filename regex="libmfhdf\.so(\.[0-9])$"/>
-            </fileset>
-            <fileset dir="${hdf.lib.dir}" followsymlinks="true">
-                <filename regex="libxdr\.so(\.[0-9])$"/>
-                <exclude name="*.a" />
+                <filename regex="libmfhdf\.so(\.[0-9][0-9])$"/>
             </fileset>
             <fileset dir="${hdf5.lib.dir}" followsymlinks="true">
                 <include name="libhdf5_java.so" />
@@ -1232,6 +1241,19 @@
             </fileset>
             <fileset dir="${hdf5.lib.dir}" followsymlinks="true">
                 <filename regex="libhdf5\.so(\.[0-9][0-9][0-9][0-9]?)$"/>
+            </fileset>
+        </copy>
+        <!-- Optional copy xdr -->
+        <copy todir="${release.dir}" failonerror="false">
+            <fileset dir="${hdf.lib.dir}" followsymlinks="true">
+                <filename regex="libxdr\.so(\.[0-9])$"/>
+                <exclude name="*.a" />
+            </fileset>
+        </copy>
+        <!-- Optional copy plugins -->
+        <copy todir="${release.dir}/plugin" failonerror="false">
+            <fileset dir="${hdf5.lib.dir}/plugin">
+                <include name="*.so" />
             </fileset>
         </copy>
 
@@ -1257,15 +1279,11 @@
                 <exclude name="slf4j*.jar" />
             </fileset>
             <fileset dir="${hdf.lib.dir}" followsymlinks="true">
-                <filename regex="libhdf(\.[0-9])(\.dylib)$"/>
+                <filename regex="libhdf(\.[0-9][0-9]?)(\.dylib)$"/>
                 <exclude name="*.a" />
             </fileset>
             <fileset dir="${hdf.lib.dir}" followsymlinks="true">
-                <filename regex="libmfhdf(\.[0-9])(\.dylib)$"/>
-                <exclude name="*.a" />
-            </fileset>
-            <fileset dir="${hdf.lib.dir}" followsymlinks="true">
-                <filename regex="libxdr(\.[0-9])(\.dylib)$"/>
+                <filename regex="libmfhdf(\.[0-9][0-9]?)(\.dylib)$"/>
                 <exclude name="*.a" />
             </fileset>
             <fileset dir="${hdf5.lib.dir}" followsymlinks="true">
@@ -1276,6 +1294,19 @@
             <fileset dir="${hdf5.lib.dir}" followsymlinks="true">
                 <filename regex="libhdf5(\.[0-9][0-9][0-9][0-9]?)(\.dylib)$"/>
                 <exclude name="*.a" />
+            </fileset>
+        </copy>
+        <!-- Optional copy xdr -->
+        <copy todir="${release.dir}" failonerror="false">
+            <fileset dir="${hdf.lib.dir}" followsymlinks="true">
+                <filename regex="libxdr(\.[0-9])(\.dylib)$"/>
+                <exclude name="*.a" />
+            </fileset>
+        </copy>
+        <!-- Optional copy plugins -->
+        <copy todir="${release.dir}/plugin" failonerror="false">
+            <fileset dir="${hdf5.lib.dir}/plugin">
+                <include name="*.dylib" />
             </fileset>
         </copy>
     </target>
@@ -1407,6 +1438,167 @@
     </target>
 
     <!-- =================================================================
+          BINARY - PACKAGE
+          ================================================================= -->
+    <target name="binaryPackage" depends="binaryPackX"
+        description="Packages into a distributable form"  />
+
+    <target name="binaryAppPackage" depends="binaryPack"
+        description="Packages the app image into a distributable form"  />
+
+    <!-- =================================================================
+          BINARY - PACKX
+          ================================================================= -->
+    <target name="setXPackage">
+        <property name="XPackage" value="true" />
+    </target>
+
+    <target name="binaryPackX" depends="setXPackage, binaryPackXWindows, binaryPackXUnix, binaryPackXMac"
+        description="Packages up the installer, the license file and the README file into a distributable form"  />
+
+    <target name="binaryPackXWindows" depends="createJXPackage, createWindowsREADME" if="${isXWindows}">
+        <mkdir dir="${dist.dir}" />
+
+        <attrib file="${basedir}\${dist.dir}\${ant.project.name}-${app.version}.exe" readonly="false" />
+        <echo message="xxxx Sign the windows binary xxxx"/>
+        <!-- Sign the generated exe -->
+        <exec executable="${env.SIGNTOOLDIR}\signtool.exe" failifexecutionfails="false">
+            <arg value="sign" />
+            <arg value="/v" />
+            <arg value="/debug" />
+            <arg value="/fd" />
+            <arg value="SHA256" />
+            <arg value="/d" />
+            <arg value="${ant.project.name} ${app.version} Utility" />
+            <arg value="/f" />
+            <arg value="${env.CERTIFICATE}" />
+            <arg value="/p" />
+            <arg value="${env.SIGNPASSWORD}" />
+            <arg value="/t" />
+            <arg value="http://timestamp.digicert.com" />
+            <arg value="${basedir}\${dist.dir}\${ant.project.name}-${app.version}.exe" />
+        </exec>
+
+        <echo message="xxxx Package the windows binary xxxx"/>
+        <!-- Copy over license file -->
+        <copy todir="${dist.dir}">
+            <fileset dir="${basedir}" includes="COPYING" />
+        </copy>
+
+        <!-- Compress everything into one zip file -->
+        <condition property="win.extension" value="win64" else="win32">
+            <contains string="${os.arch}" substring="64" />
+        </condition>
+        <zip destfile="${dist.dir}/${ant.project.name}-${app.version}-${win.extension}.zip" basedir="${dist.dir}" />
+    </target>
+
+    <target name="binaryPackXUnix" depends="createJXPackage, createDEBREADME, createRPMREADME" if="${isXUnix}">
+        <echo message="xxxx Package the unix binary xxxx"/>
+        <!-- Copy over license file -->
+        <copy todir="${dist.dir}">
+            <fileset dir="${basedir}" includes="COPYING" />
+        </copy>
+
+        <exec executable="uname" outputproperty="uname.os">
+            <arg value="-s" />
+        </exec>
+
+        <exec executable="uname" outputproperty="uname.version">
+            <arg value="-r" />
+        </exec>
+
+        <!-- Compress everything into one tar.gz file -->
+        <tar destfile="${dist.dir}/${ant.project.name}-${app.version}-${uname.os}-${machine.arch}.tar.gz" compression="gzip">
+            <tarfileset dir="${dist.dir}" filemode="755">
+                <exclude name="temp.tar.gz" />
+            </tarfileset>
+        </tar>
+        <chmod perm="ugo+rx" file="${dist.dir}/${ant.project.name}-${app.version}-${uname.os}-${machine.arch}.tar.gz" />
+        <chmod perm="u+w" file="${dist.dir}/${ant.project.name}-${app.version}-${uname.os}-${machine.arch}.tar.gz" />
+    </target>
+
+    <target name="binaryPackXMac" depends="createJXPackageMac, createMacREADME" if="${isXMac}">
+        <!-- unlock keychain -->
+        <exec executable="security" dir="${dist.dir}" failonerror="true">
+            <arg value="unlock-keychain" />
+            <arg value="-p" />
+            <arg value="${pass.keychain_key}" />
+            <arg value="${name.keychain_key}" />
+        </exec>
+
+        <echo message="xxxx Code sign the mac dmg xxxx"/>
+        <!-- Code signing the dmg -->
+        <exec executable="codesign" dir="${dist.dir}" failonerror="true">
+            <arg value="--force" />
+            <arg value="--timestamp" />
+            <arg value="--options" />
+            <arg value="runtime" />
+            <arg value="--entitlements" />
+            <arg value="${basedir}/${lib.dir}/macosx/distribution.entitlements" />
+            <arg value="--verbose=4" />
+            <arg value="--strict" />
+            <arg value="--sign" />
+            <arg value="${sign.account}" />
+            <arg value="--deep" />
+            <arg value="${ant.project.name}-${app.version}.dmg" />
+        </exec>
+
+        <echo message="xxxx Check for secure dmg timestamp xxxx"/>
+        <!-- Code signing the application image -->
+        <exec executable="codesign" dir="${dist.dir}" failonerror="true">
+            <arg value="-dvv" />
+            <arg value="${ant.project.name}-${app.version}.dmg" />
+        </exec>
+
+        <echo message="xxxx Verify dmg xxxx"/>
+        <exec dir="${dist.dir}" executable="hdiutil">
+            <arg value="verify" />
+            <arg value="${ant.project.name}-${app.version}.dmg" />
+        </exec>
+
+        <echo message="xxxx Notarize dmg xxxx"/>
+        <antcall target="submit-notary" />
+
+        <echo message="xxxx Staple notary ID to dmg xxxx"/>
+        <antcall target="staple-notary" />
+
+        <echo message="xxxx Package the mac dmg binary xxxx"/>
+        <!-- Copy over license file -->
+        <copy tofile="${dist.dir}/COPYING.txt">
+            <fileset dir="${basedir}" includes="COPYING" />
+        </copy>
+
+        <exec executable="uname" outputproperty="uname.os">
+            <arg value="-s" />
+        </exec>
+
+        <exec executable="uname" outputproperty="uname.version">
+            <arg value="-r" />
+        </exec>
+
+        <exec dir="${dist.dir}" executable="hdiutil">
+            <arg value="verify" />
+            <arg value="${ant.project.name}-${app.version}.dmg" />
+        </exec>
+
+        <echo message="xxxx Compress the mac dmg binary xxxx"/>
+        <!-- Copy over license file -->
+        <copy tofile="${dist.dir}/COPYING.txt">
+            <fileset dir="${basedir}" includes="COPYING" />
+        </copy>
+
+        <!-- Compress everything into one tar.gz file -->
+        <tar destfile="${dist.dir}/${ant.project.name}-${app.version}-${uname.os}.tar.gz" compression="gzip">
+            <tarfileset dir="${dist.dir}" filemode="755">
+                <include name="COPYING.txt" />
+                <include name="README.txt" />
+                <include name="${ant.project.name}-${app.version}.dmg" />
+            </tarfileset>
+        </tar>
+
+    </target>
+
+    <!-- =================================================================
           JXPackage - native
          ================================================================= -->
 
@@ -1419,8 +1611,8 @@
         <exec executable="security" dir="${dist.dir}" failonerror="true">
             <arg value="unlock-keychain" />
             <arg value="-p" />
-            <arg value="${login.keychain_key}" />
-            <arg value="login.keychain" />
+            <arg value="${pass.keychain_key}" />
+            <arg value="${name.keychain_key}" />
         </exec>
 
         <echo> JXPackage the mac application</echo>
@@ -1497,6 +1689,8 @@
             <arg value="org.hdfgroup.HDFView" />
             <arg value="--mac-signing-key-user-name" />
             <arg value="The HDF Group (${sign.account})" />
+            <arg value="--mac-signing-keychain" />
+            <arg value="${name.keychain_key}" />
         </exec>
     </target>
 
@@ -1548,7 +1742,7 @@
             <arg value="-Djava.library.path='$APPDIR'" />
             <!-- Application images -->
             <arg value="--icon" />
-            <arg value="${basedir}/package_files/hdf.png" />
+            <arg value="${basedir}/package_files/hdfview.png" />
             <arg value="--linux-menu-group" />
             <arg value="The HDF Group" />
             <!-- Runtime images -->
@@ -1615,7 +1809,7 @@
             <arg value="-Djava.library.path=$APPDIR" />
             <!-- Application images -->
             <arg value="--icon" />
-            <arg value="${basedir}/package_files/hdf.ico" />
+            <arg value="${basedir}/package_files/hdfview.ico" />
             <arg value="--temp" />
             <arg value="${build.dir}/temp" />
             <!-- Runtime images -->
@@ -1637,48 +1831,87 @@
     </target>
 
     <!-- =================================================================
-          BINARY - PACKAGE
+          MAC NOTARY FOR JXPACKAGE
           ================================================================= -->
-    <target name="binaryPackage" depends="binaryPackX"
-        description="Packages into a distributable form"  />
 
-    <target name="binaryAppPackage" depends="binaryPack"
-        description="Packages the app image into a distributable form"  />
-
-    <!-- =================================================================
-          BINARY - PACKX
-          ================================================================= -->
-    <target name="setXPackage">
-        <property name="XPackage" value="true" />
+    <target name="zip-submit-notary" if="sign.enable">
+        <exec executable="/usr/bin/xcrun" failonerror="true"
+              outputproperty="zipUUID.txt">
+            <arg value="notarytool"/>
+            <arg value="submit"/>
+            <arg value="--wait"/>
+            <arg value="--output-format"/>
+            <arg value="json"/>
+            <arg value="--apple-id"/>
+            <arg value="${notarize.account}"/>
+            <arg value="--password"/>
+            <arg value="${notarize.keychain_key}"/>
+            <arg value="--team-id"/>
+            <arg value="${sign.account}"/>
+            <arg value="${dist.dir}/${ant.project.name}-${app.version}.zip"/>
+        </exec>
+        <echo>.....notarize-zip-app output:${zipUUID.txt}.....</echo>
+        <loadresource property="zipUUID">
+            <concat>${zipUUID.txt}</concat>
+            <filterchain>
+                <tokenfilter>
+                    <stringtokenizer delims=",:&quot;" suppressdelims="true" />
+                    <containsregex pattern="([0-9a-fA-F]+\-[0-9a-fA-F]+\-[0-9a-fA-F]+\-[0-9a-fA-F]+\-[0-9a-fA-F]+)" replace="\1" />
+                </tokenfilter>
+                <striplinebreaks/>
+            </filterchain>
+        </loadresource>
+        <echo>*** notarize-zip-app:${zipUUID} ***</echo>
     </target>
 
-    <target name="binaryPackX" depends="setXPackage, binaryPackXWindows, binaryPackXUnix, binaryPackXMac"
-        description="Packages up the installer, the license file and the README file into a distributable form"  />
+    <target name="zip-post-notary" if="sign.enable">
+        <exec executable="/usr/bin/xcrun" failonerror="true" outputproperty="logInfo" resultproperty="logUUID">
+            <redirector output="notary.txt" alwayslog="true"/>
+            <arg value="notarytool"/>
+            <arg value="info"/>
+            <arg value="--apple-id"/>
+            <arg value="${notarize.account}"/>
+            <arg value="--password"/>
+            <arg value="${notarize.keychain_key}"/>
+            <arg value="--team-id"/>
+            <arg value="${sign.account}"/>
+            <arg value="${zipUUID}"/>
+        </exec>
+        <condition property="isnotarized">
+            <resourcecontains resource="notary.txt" substring="success"/>
+        </condition>
+        <echo>*** zip-notarize-info:${logInfo} ***</echo>
+    </target>
 
-    <target name="binaryPackXWindows" depends="createJXPackage, createWindowsREADME" if="${isXWindows}">
-        <mkdir dir="${dist.dir}" />
-
-        <attrib file="${basedir}\${dist.dir}\${ant.project.name}-${app.version}.exe" readonly="false" />
-        <echo message="xxxx Sign the windows binary xxxx"/>
-        <!-- Sign the generated exe -->
-        <exec executable="${env.SIGNTOOLDIR}\signtool.exe">
-            <arg value="sign" />
-            <arg value="/v" />
-            <arg value="/debug" />
-            <arg value="/fd" />
-            <arg value="SHA256" />
-            <arg value="/d" />
-            <arg value="${ant.project.name} ${app.version} Utility" />
-            <arg value="/f" />
-            <arg value="${env.CERTIFICATE}" />
-            <arg value="/p" />
-            <arg value="${env.SIGNPASSWORD}" />
-            <arg value="/t" />
-            <arg value="http://timestamp.digicert.com" />
-            <arg value="${basedir}\${dist.dir}\${ant.project.name}-${app.version}.exe" />
+    <!-- Staple the received notarization to the app -->
+    <!-- run this after notarization is completed -->
+    <target name="zip-staple-notary" if="sign.enable">
+        <echo message="*** Stapling notarization to Mac Build ***"/>
+        <exec executable="/usr/bin/xcrun" dir="${dist.dir}" failonerror="true">
+            <arg value="stapler"/>
+            <arg value="staple"/>
+            <arg value="${ant.project.name}.app"/>
         </exec>
 
-        <echo message="xxxx Package the windows binary xxxx"/>
+        <!-- verify staple -->
+        <exec executable="/usr/bin/xcrun" dir="${dist.dir}">
+            <arg value="stapler"/>
+            <arg value="validate"/>
+            <arg value="-v" />
+            <arg value="${ant.project.name}.app"/>
+        </exec>
+    </target>
+
+    <!-- =================================================================
+          BINARY - PACK
+          ================================================================= -->
+    <target name="binaryPack" depends="clean-package, binaryPackWindows, binaryPackUnix, binaryPackMac"
+        description="Packages up the release directory, the license file and the README file into a distributable form" />
+
+    <target name="binaryPackWindows" depends="createJPackage, createWindowsAppREADME" if="${isAppWindows}">
+        <mkdir dir="${dist.dir}" />
+
+        <echo message="---- Create the windows installer binary ----"/>
         <!-- Copy over license file -->
         <copy todir="${dist.dir}">
             <fileset dir="${basedir}" includes="COPYING" />
@@ -1691,20 +1924,14 @@
         <zip destfile="${dist.dir}/${ant.project.name}-${app.version}-${win.extension}.zip" basedir="${dist.dir}" />
     </target>
 
-    <target name="binaryPackXUnix" depends="createJXPackage, createDEBREADME, createRPMREADME" if="${isXUnix}">
-        <echo message="xxxx Package the unix binary xxxx"/>
+    <target name="binaryPackUnix" depends="createJPackage, createUnixREADME" if="${isAppUnix}">
+        <mkdir dir="${dist.dir}" />
+
+        <echo message="---- Create the unix installer binary ----"/>
         <!-- Copy over license file -->
         <copy todir="${dist.dir}">
             <fileset dir="${basedir}" includes="COPYING" />
         </copy>
-
-        <exec executable="uname" outputproperty="uname.os">
-            <arg value="-s" />
-        </exec>
-
-        <exec executable="uname" outputproperty="uname.version">
-            <arg value="-r" />
-        </exec>
 
         <!-- Compress everything into one tar.gz file -->
         <tar destfile="${dist.dir}/${ant.project.name}-${app.version}-${uname.os}-${machine.arch}.tar.gz" compression="gzip">
@@ -1716,16 +1943,27 @@
         <chmod perm="u+w" file="${dist.dir}/${ant.project.name}-${app.version}-${uname.os}-${machine.arch}.tar.gz" />
     </target>
 
-    <target name="binaryPackXMac" depends="createJXPackageMac, createMacREADME" if="${isXMac}">
+    <target name="binaryPackMac" depends="createJPackageMac, createMacREADME" if="${isAppMac}">
         <!-- unlock keychain -->
         <exec executable="security" dir="${dist.dir}" failonerror="true">
             <arg value="unlock-keychain" />
             <arg value="-p" />
-            <arg value="${login.keychain_key}" />
-            <arg value="login.keychain" />
+            <arg value="${pass.keychain_key}" />
+            <arg value="${name.keychain_key}" />
         </exec>
 
-        <echo message="xxxx Code sign the mac dmg xxxx"/>
+        <echo message="---- Create the mac zip ----"/>
+        <!-- create zip -->
+        <exec executable="ditto" dir="${dist.dir}" failonerror="true">
+            <arg value="-c" />
+            <arg value="-k" />
+            <arg value="--sequesterRsrc" />
+            <arg value="--keepParent" />
+            <arg value="${ant.project.name}.app" />
+            <arg value="${ant.project.name}-${app.version}.zip" />
+        </exec>
+
+        <echo message="---- Code sign the mac zip ----"/>
         <!-- Code signing the dmg -->
         <exec executable="codesign" dir="${dist.dir}" failonerror="true">
             <arg value="--force" />
@@ -1739,33 +1977,41 @@
             <arg value="--sign" />
             <arg value="${sign.account}" />
             <arg value="--deep" />
-            <arg value="${ant.project.name}-${app.version}.dmg" />
+            <arg value="${ant.project.name}-${app.version}.zip" />
         </exec>
 
-        <echo message="xxxx Check for secure dmg timestamp xxxx"/>
+        <echo message="---- Check for secure timestamp ----"/>
         <!-- Code signing the application image -->
         <exec executable="codesign" dir="${dist.dir}" failonerror="true">
             <arg value="-dvv" />
-            <arg value="${ant.project.name}-${app.version}.dmg" />
+            <arg value="${ant.project.name}-${app.version}.zip" />
         </exec>
 
-        <echo message="xxxx Verify dmg xxxx"/>
-        <exec dir="${dist.dir}" executable="hdiutil">
-            <arg value="verify" />
-            <arg value="${ant.project.name}-${app.version}.dmg" />
+        <echo message="---- Notarize zip AppImage ----"/>
+        <antcall target="zip-submit-notary" />
+
+        <!-- <antcall target="zip-post-notary" /> -->
+
+        <echo message="---- Staple zip AppImage ----"/>
+        <antcall target="zip-staple-notary" />
+
+        <!-- verify codesign -->
+        <echo message="---- Verify app codesign ----"/>
+        <exec executable="codesign" dir="${dist.dir}">
+            <arg value="-vvvv" />
+            <arg value="--strict" />
+            <arg value="${ant.project.name}.app" />
         </exec>
 
-        <antcall target="submit-notary" />
-
-        <antcall target="post-notary" />
-
-        <antcall target="staple-notary" />
-
-        <echo message="xxxx Package the mac dmg binary xxxx"/>
-        <!-- Copy over license file -->
-        <copy tofile="${dist.dir}/COPYING.txt">
-            <fileset dir="${basedir}" includes="COPYING" />
-        </copy>
+        <!-- verify gatekeeper -->
+        <echo message="---- Verify app gatekeeper ----"/>
+        <exec executable="spctl" dir="${dist.dir}" failonerror="true">
+            <arg value="-vvvv" />
+            <arg value="--assess" />
+            <arg value="--type" />
+            <arg value="execute" />
+            <arg value="${ant.project.name}.app" />
+        </exec>
 
         <exec executable="uname" outputproperty="uname.os">
             <arg value="-s" />
@@ -1775,26 +2021,29 @@
             <arg value="-r" />
         </exec>
 
-        <exec dir="${dist.dir}" executable="hdiutil">
-            <arg value="verify" />
-            <arg value="${ant.project.name}-${app.version}.dmg" />
+        <!-- verify gatekeeper -->
+        <exec executable="spctl" dir="${dist.dir}" failonerror="false">
+            <arg value="-vvvv" />
+            <arg value="--assess" />
+            <arg value="--type" />
+            <arg value="install" />
+            <arg value="${ant.project.name}.app" />
         </exec>
 
-        <echo message="xxxx Compress the mac dmg binary xxxx"/>
+        <echo message="---- Compress the mac app binary ----"/>
         <!-- Copy over license file -->
         <copy tofile="${dist.dir}/COPYING.txt">
             <fileset dir="${basedir}" includes="COPYING" />
         </copy>
 
         <!-- Compress everything into one tar.gz file -->
-        <tar destfile="${dist.dir}/${ant.project.name}-${app.version}-${uname.os}-${uname.version}.tar.gz" compression="gzip">
+        <tar destfile="${dist.dir}/${ant.project.name}-${app.version}-${uname.os}.tar.gz" compression="gzip">
             <tarfileset dir="${dist.dir}" filemode="755">
                 <include name="COPYING.txt" />
                 <include name="README.txt" />
-                <include name="${ant.project.name}-${app.version}.dmg" />
+                <include name="${ant.project.name}.app/**" />
             </tarfileset>
         </tar>
-
     </target>
 
     <!-- =================================================================
@@ -1809,8 +2058,8 @@
         <exec executable="security" dir="${dist.dir}" failonerror="true">
             <arg value="unlock-keychain" />
             <arg value="-p" />
-            <arg value="${login.keychain_key}" />
-            <arg value="login.keychain" />
+            <arg value="${pass.keychain_key}" />
+            <arg value="${name.keychain_key}" />
         </exec>
 
         <echo> Create the mac jpackage</echo>
@@ -1988,68 +2237,58 @@
           MAC NOTARY FOR JPACKAGE
           ================================================================= -->
 
-    <target name="submit-notary">
-        <exec executable="/usr/bin/xcrun" failonerror="true">
-            <redirector output="retUUID.txt" alwayslog="true"/>
-            <arg value="altool"/>
-            <arg value="--notarize-app"/>
-            <arg value="--type"/>
-            <arg value="osx"/>
-            <arg value="--primary-bundle-id"/>
-            <arg value="app.${ant.project.name}-${app.version}"/>
-            <arg value="--username"/>
+    <target name="submit-notary" if="sign.enable">
+        <exec executable="/usr/bin/xcrun" failonerror="true"
+              outputproperty="retUUID.txt">
+            <arg value="notarytool"/>
+            <arg value="submit"/>
+            <arg value="--wait"/>
+            <arg value="--output-format"/>
+            <arg value="json"/>
+            <arg value="--apple-id"/>
             <arg value="${notarize.account}"/>
             <arg value="--password"/>
             <arg value="${notarize.keychain_key}"/>
-            <!-- <arg value="@keychain:${notarize.keychain_key}"/> -->
-            <arg value="--file"/>
+            <arg value="--team-id"/>
+            <arg value="${sign.account}"/>
             <arg value="${dist.dir}/${ant.project.name}-${app.version}.dmg"/>
         </exec>
-        <loadfile property="retUUID" srcfile="retUUID.txt">
+        <echo>.....notarize-app output:${retUUID.txt}.....</echo>
+        <loadresource property="retUUID">
+            <concat>${retUUID.txt}</concat>
             <filterchain>
                 <tokenfilter>
-                    <containsregex
-                         pattern="RequestUUID\s*\=\s*([0-9a-fA-F-]+)$"
-                         replace="\1" />
+                    <stringtokenizer delims=",:&quot;" suppressdelims="true" />
+                    <containsregex pattern="([0-9a-fA-F]+\-[0-9a-fA-F]+\-[0-9a-fA-F]+\-[0-9a-fA-F]+\-[0-9a-fA-F]+)" replace="\1" />
                 </tokenfilter>
                 <striplinebreaks/>
             </filterchain>
-        </loadfile>
-        <echo>notarize-app:${retUUID}</echo>
+        </loadresource>
+        <echo>*** notarize-app:${retUUID} ***</echo>
     </target>
 
-    <target name="post-notary">
-        <loadfile property="retUUID" srcfile="retUUID.txt">
-            <filterchain>
-                <tokenfilter>
-                    <containsregex
-                         pattern="RequestUUID\s*\=\s*([0-9a-fA-F-]+)$"
-                         replace="\1" />
-                </tokenfilter>
-                <striplinebreaks/>
-            </filterchain>
-        </loadfile>
-        <sleep minutes="10"/>
+    <target name="post-notary" if="sign.enable">
         <exec executable="/usr/bin/xcrun" failonerror="true" outputproperty="logInfo" resultproperty="logUUID">
             <redirector output="notary.txt" alwayslog="true"/>
-            <arg value="altool"/>
-            <arg value="--notarization-info"/>
-            <arg value="${retUUID}"/>
-            <arg value="--username"/>
+            <arg value="notarytool"/>
+            <arg value="info"/>
+            <arg value="--apple-id"/>
             <arg value="${notarize.account}"/>
             <arg value="--password"/>
             <arg value="${notarize.keychain_key}"/>
-            <!-- <arg value="@keychain:${notarize.keychain_key}"/> -->
+            <arg value="--team-id"/>
+            <arg value="${sign.account}"/>
+            <arg value="${retUUID}"/>
         </exec>
         <condition property="isnotarized">
             <resourcecontains resource="notary.txt" substring="success"/>
         </condition>
-        <echo>notarize-info:${logInfo}</echo>
+        <echo>*** notarize-info:${logInfo} ***</echo>
     </target>
 
     <!-- Staple the received notarization to the app -->
     <!-- run this after notarization is completed -->
-    <target name="staple-notary">
+    <target name="staple-notary" if="sign.enable">
         <echo message="*** Stapling notarization to Mac Build ***"/>
         <exec executable="/usr/bin/xcrun" dir="${dist.dir}" failonerror="true">
             <arg value="stapler"/>
@@ -2066,197 +2305,6 @@
         </exec>
     </target>
 
-        <target name="zip-submit-notary">
-            <exec executable="/usr/bin/xcrun" failonerror="true">
-                <redirector output="retUUID.txt" alwayslog="true"/>
-                <arg value="altool"/>
-                <arg value="--notarize-app"/>
-                <arg value="--type"/>
-                <arg value="osx"/>
-                <arg value="--primary-bundle-id"/>
-                <arg value="app.${ant.project.name}-${app.version}"/>
-                <arg value="--username"/>
-                <arg value="${notarize.account}"/>
-                <arg value="--password"/>
-                <arg value="${notarize.keychain_key}"/>
-                <!-- <arg value="@keychain:${notarize.keychain_key}"/> -->
-                <arg value="--file"/>
-                <arg value="${dist.dir}/${ant.project.name}-${app.version}.zip"/>
-            </exec>
-            <loadfile property="retUUID" srcfile="retUUID.txt">
-                <filterchain>
-                    <tokenfilter>
-                        <containsregex
-                             pattern="RequestUUID\s*\=\s*([0-9a-fA-F-]+)$"
-                             replace="\1" />
-                    </tokenfilter>
-                    <striplinebreaks/>
-                </filterchain>
-            </loadfile>
-            <echo>notarize-app:${retUUID}</echo>
-        </target>
-
-    <!-- Staple the received notarization to the app -->
-    <!-- run this after notarization is completed -->
-    <target name="zip-staple-notary">
-        <echo message="*** Stapling notarization to Mac Build ***"/>
-        <exec executable="/usr/bin/xcrun" dir="${dist.dir}" failonerror="true">
-            <arg value="stapler"/>
-            <arg value="staple"/>
-            <arg value="${ant.project.name}.app"/>
-        </exec>
-
-        <!-- verify staple -->
-        <exec executable="/usr/bin/xcrun" dir="${dist.dir}">
-            <arg value="stapler"/>
-            <arg value="validate"/>
-            <arg value="-v" />
-            <arg value="${ant.project.name}.app"/>
-        </exec>
-    </target>
-
-    <!-- =================================================================
-          BINARY - PACK
-          ================================================================= -->
-    <target name="binaryPack" depends="clean-package, binaryPackWindows, binaryPackUnix, binaryPackMac"
-        description="Packages up the release directory, the license file and the README file into a distributable form" />
-
-    <target name="binaryPackWindows" depends="createJPackage, createWindowsAppREADME" if="${isAppWindows}">
-        <mkdir dir="${dist.dir}" />
-
-        <echo message="---- Create the windows installer binary ----"/>
-        <!-- Copy over license file -->
-        <copy todir="${dist.dir}">
-            <fileset dir="${basedir}" includes="COPYING" />
-        </copy>
-
-        <!-- Compress everything into one zip file -->
-        <condition property="win.extension" value="win64" else="win32">
-            <contains string="${os.arch}" substring="64" />
-        </condition>
-        <zip destfile="${dist.dir}/${ant.project.name}-${app.version}-${win.extension}.zip" basedir="${dist.dir}" />
-    </target>
-
-    <target name="binaryPackUnix" depends="createJPackage, createUnixREADME" if="${isAppUnix}">
-        <mkdir dir="${dist.dir}" />
-
-        <echo message="---- Create the unix installer binary ----"/>
-        <!-- Copy over license file -->
-        <copy todir="${dist.dir}">
-            <fileset dir="${basedir}" includes="COPYING" />
-        </copy>
-
-        <!-- Compress everything into one tar.gz file -->
-        <tar destfile="${dist.dir}/${ant.project.name}-${app.version}-${uname.os}-${machine.arch}.tar.gz" compression="gzip">
-            <tarfileset dir="${dist.dir}" filemode="755">
-                <exclude name="temp.tar.gz" />
-            </tarfileset>
-        </tar>
-        <chmod perm="ugo+rx" file="${dist.dir}/${ant.project.name}-${app.version}-${uname.os}-${machine.arch}.tar.gz" />
-        <chmod perm="u+w" file="${dist.dir}/${ant.project.name}-${app.version}-${uname.os}-${machine.arch}.tar.gz" />
-    </target>
-
-    <target name="binaryPackMac" depends="createJPackageMac, createMacREADME" if="${isAppMac}">
-        <!-- unlock keychain -->
-        <exec executable="security" dir="${dist.dir}" failonerror="true">
-            <arg value="unlock-keychain" />
-            <arg value="-p" />
-            <arg value="${login.keychain_key}" />
-            <arg value="login.keychain" />
-        </exec>
-
-        <echo message="---- Create the mac zip ----"/>
-        <!-- create zip -->
-        <exec executable="ditto" dir="${dist.dir}" failonerror="true">
-            <arg value="-c" />
-            <arg value="-k" />
-            <arg value="--sequesterRsrc" />
-            <arg value="--keepParent" />
-            <arg value="${ant.project.name}.app" />
-            <arg value="${ant.project.name}-${app.version}.zip" />
-        </exec>
-
-        <echo message="---- Code sign the mac zip ----"/>
-        <!-- Code signing the dmg -->
-        <exec executable="codesign" dir="${dist.dir}" failonerror="true">
-            <arg value="--force" />
-            <arg value="--timestamp" />
-            <arg value="--options" />
-            <arg value="runtime" />
-            <arg value="--entitlements" />
-            <arg value="${basedir}/${lib.dir}/macosx/distribution.entitlements" />
-            <arg value="--verbose=4" />
-            <arg value="--strict" />
-            <arg value="--sign" />
-            <arg value="${sign.account}" />
-            <arg value="--deep" />
-            <arg value="${ant.project.name}-${app.version}.zip" />
-        </exec>
-
-        <echo message="---- Check for secure timestamp ----"/>
-        <!-- Code signing the application image -->
-        <exec executable="codesign" dir="${dist.dir}" failonerror="true">
-            <arg value="-dvv" />
-            <arg value="${ant.project.name}-${app.version}.zip" />
-        </exec>
-
-        <antcall target="zip-submit-notary" />
-
-        <antcall target="post-notary" />
-
-        <antcall target="zip-staple-notary" />
-
-        <!-- verify codesign -->
-        <echo message="---- Verify app codesign ----"/>
-        <exec executable="codesign" dir="${dist.dir}">
-            <arg value="-vvvv" />
-            <arg value="--strict" />
-            <arg value="${ant.project.name}.app" />
-        </exec>
-
-        <!-- verify gatekeeper -->
-        <echo message="---- Verify app gatekeeper ----"/>
-        <exec executable="spctl" dir="${dist.dir}" failonerror="true">
-            <arg value="-vvvv" />
-            <arg value="--assess" />
-            <arg value="--type" />
-            <arg value="execute" />
-            <arg value="${ant.project.name}.app" />
-        </exec>
-
-        <exec executable="uname" outputproperty="uname.os">
-            <arg value="-s" />
-        </exec>
-
-        <exec executable="uname" outputproperty="uname.version">
-            <arg value="-r" />
-        </exec>
-
-        <!-- verify gatekeeper -->
-        <exec executable="spctl" dir="${dist.dir}" failonerror="false">
-            <arg value="-vvvv" />
-            <arg value="--assess" />
-            <arg value="--type" />
-            <arg value="install" />
-            <arg value="${ant.project.name}.app" />
-        </exec>
-
-        <echo message="---- Compress the mac app binary ----"/>
-        <!-- Copy over license file -->
-        <copy tofile="${dist.dir}/COPYING.txt">
-            <fileset dir="${basedir}" includes="COPYING" />
-        </copy>
-
-        <!-- Compress everything into one tar.gz file -->
-        <tar destfile="${dist.dir}/${ant.project.name}-${app.version}-${uname.os}-${uname.version}.tar.gz" compression="gzip">
-            <tarfileset dir="${dist.dir}" filemode="755">
-                <include name="COPYING.txt" />
-                <include name="README.txt" />
-                <include name="${ant.project.name}.app/**" />
-            </tarfileset>
-        </tar>
-    </target>
-
-    <target name="main" depends="clean,run" />
+   <target name="main" depends="clean,run" />
 
 </project>

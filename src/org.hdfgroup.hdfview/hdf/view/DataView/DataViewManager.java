@@ -5,9 +5,9 @@
  *                                                                           *
  * This file is part of the HDF Java Products distribution.                  *
  * The full copyright notice, including terms governing use, modification,   *
- * and redistribution, is contained in the files COPYING and Copyright.html. *
- * COPYING can be found at the root of the source code distribution tree.    *
- * Or, see https://support.hdfgroup.org/products/licenses.html               *
+ * and redistribution, is contained in the COPYING file, which can be found  *
+ * at the root of the source code distribution tree,                         *
+ * or in https://www.hdfgroup.org/licenses.                                  *
  * If you do not have access to either file, you may request a copy from     *
  * help@hdfgroup.org.                                                        *
  ****************************************************************************/
@@ -25,13 +25,15 @@ import hdf.view.TreeView.TreeView;
  * @version 2.4 9/6/2007
  */
 public abstract interface DataViewManager {
-    /** Data content is displayed, add the dataview to the main windows
+    /**
+     * Data content is displayed, add the dataview to the main windows
      * @param dataView
      *            the dataView whose presence in the main view is to be added.
      */
     public abstract void addDataView(DataView dataView);
 
-    /** Data content is closed, remove the dataview from the main window
+    /**
+     * Data content is closed, remove the dataview from the main window
      * @param dataView
      *            the dataView whose presence in the main view is to be removed.
      */
@@ -65,7 +67,11 @@ public abstract interface DataViewManager {
      */
     public abstract void showError(String errMsg);
 
-    /** @return the current TreeView */
+    /**
+     * Get the current TreeView
+     *
+     * @return the current TreeView
+     */
     public abstract TreeView getTreeView();
 
     /**
@@ -75,5 +81,4 @@ public abstract interface DataViewManager {
      *            -- true: start timer, false stop timer.
      */
     public abstract void executeTimer(boolean toggleTimer);
-
 }

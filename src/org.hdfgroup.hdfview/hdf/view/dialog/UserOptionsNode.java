@@ -5,9 +5,9 @@
  *                                                                           *
  * This file is part of the HDF Java Products distribution.                  *
  * The full copyright notice, including terms governing use, modification,   *
- * and redistribution, is contained in the files COPYING and Copyright.html. *
- * COPYING can be found at the root of the source code distribution tree.    *
- * Or, see https://support.hdfgroup.org/products/licenses.html               *
+ * and redistribution, is contained in the COPYING file, which can be found  *
+ * at the root of the source code distribution tree,                         *
+ * or in https://www.hdfgroup.org/licenses.                                  *
  * If you do not have access to either file, you may request a copy from     *
  * help@hdfgroup.org.                                                        *
  ****************************************************************************/
@@ -35,9 +35,7 @@ public class UserOptionsNode extends PreferenceNode {
      *
      * @param id the node id
      */
-    public UserOptionsNode(String id) {
-        super(id);
-    }
+    public UserOptionsNode(String id) { super(id); }
 
     /**
      * Creates an <code>UserOptionsNode</code> with the given id,
@@ -53,8 +51,8 @@ public class UserOptionsNode extends PreferenceNode {
      * @param className the class name of the preference page; this class must
      *            implement <code>IPreferencePage</code>
      */
-    public UserOptionsNode(String id, String label,
-            ImageDescriptor image, String className) {
+    public UserOptionsNode(String id, String label, ImageDescriptor image, String className)
+    {
         super(id, label, image, className);
         this.classname = className;
     }
@@ -67,7 +65,5 @@ public class UserOptionsNode extends PreferenceNode {
      * @param id the node id
      * @param preferencePage the preference page
      */
-    public UserOptionsNode(String id, IPreferencePage preferencePage) {
-        super(id, preferencePage);
-    }
+    public UserOptionsNode(String id, IPreferencePage preferencePage) { super(id, preferencePage); }
 }

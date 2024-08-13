@@ -5,9 +5,9 @@
  *                                                                           *
  * This file is part of the HDF Java Products distribution.                  *
  * The full copyright notice, including terms governing use, modification,   *
- * and redistribution, is contained in the files COPYING and Copyright.html. *
- * COPYING can be found at the root of the source code distribution tree.    *
- * Or, see https://support.hdfgroup.org/products/licenses.html               *
+ * and redistribution, is contained in the COPYING file, which can be found  *
+ * at the root of the source code distribution tree,                         *
+ * or in https://www.hdfgroup.org/licenses.                                  *
  * If you do not have access to either file, you may request a copy from     *
  * help@hdfgroup.org.                                                        *
  ****************************************************************************/
@@ -16,14 +16,14 @@ package hdf.view.TreeView;
 
 import java.util.List;
 
-import org.eclipse.swt.widgets.Tree;
-import org.eclipse.swt.widgets.TreeItem;
-
 import hdf.object.FileFormat;
 import hdf.object.Group;
 import hdf.object.HObject;
 import hdf.view.DataView.DataView;
 import hdf.view.MetaDataView.MetaDataView;
+
+import org.eclipse.swt.widgets.Tree;
+import org.eclipse.swt.widgets.TreeItem;
 
 /**
  * TreeView defines APIs for opening a file and displaying the file structure in
@@ -123,6 +123,8 @@ public abstract interface TreeView {
     public abstract FileFormat getSelectedFile();
 
     /**
+     * Get the current selected object in the tree
+     *
      * @return the current selected object in the tree.
      */
     public abstract HObject getCurrentObject();
@@ -137,8 +139,7 @@ public abstract interface TreeView {
      *
      * @throws Exception if a failure occurred
      */
-    public abstract DataView showDataContent(HObject dataObject)
-            throws Exception;
+    public abstract DataView showDataContent(HObject dataObject) throws Exception;
 
     /**
      * Adds an already created HObject to the tree under the
@@ -154,20 +155,25 @@ public abstract interface TreeView {
     public abstract TreeItem addObject(HObject newObject, Group parentGroup);
 
     /**
+     * Get the Tree which holds the file structure
+     *
      * @return the Tree which holds the file structure.
      */
     public abstract Tree getTree();
 
     /**
+     * Get the list of currently open files
+     *
      * @return the list of currently open files.
      */
     public abstract List<FileFormat> getCurrentFiles();
 
     /**
+     * Get the tree item that contains the given data object.
+     *
      * @param obj the object to find
      *
      * @return the tree item that contains the given data object.
      */
     public abstract TreeItem findTreeItem(HObject obj);
-
 }
