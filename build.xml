@@ -1467,15 +1467,15 @@
             <arg value="/v" />
             <arg value="/debug" />
             <arg value="/fd" />
-            <arg value="SHA256" />
+            <arg value="sha256" />
+            <arg value="/td" />
+            <arg value="sha256" />	    
             <arg value="/d" />
             <arg value="${ant.project.name} ${app.version} Utility" />
             <arg value="/f" />
             <arg value="${env.CERTIFICATE}" />
             <arg value="/p" />
             <arg value="${env.SIGNPASSWORD}" />
-            <arg value="/t" />
-            <arg value="http://timestamp.digicert.com" />
             <arg value="${basedir}\${dist.dir}\${ant.project.name}-${app.version}.exe" />
         </exec>
 
