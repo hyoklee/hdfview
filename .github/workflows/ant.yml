@@ -216,7 +216,7 @@ jobs:
         HDF5LIBS: ${{ steps.set-hdf5lib-name.outputs.HDF5LIB_ENV }}
         SIGNTOOLDIR: "C:\\Program Files (x86)\\Windows Kits\\10\\bin\\10.0.22621.0\\x64"
         CERTIFICATE: 'testCert.pfx'
-        SIGNPASSWORD: '${{ steps.generate-cert.outputs.certPassword }}'
+        SIGNPASSWORD: ${{ steps.generate-cert.outputs.certPassword }}
       run: |
         ant -noinput -buildfile build.xml binaryPackage
       shell: bash
